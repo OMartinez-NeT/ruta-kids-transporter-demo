@@ -34,6 +34,7 @@ export default function useLocation(props) {
     console.log("tracking started?", hasStarted);
   };
 
+
   React.useEffect(() => {
     // Ask for permissions
     const config = async () => {
@@ -57,6 +58,7 @@ export default function useLocation(props) {
           latitude: location.coords.latitude,
           longitude: location.coords.longitude,
         });
+ 
       })
     }
 
@@ -71,8 +73,10 @@ export default function useLocation(props) {
   const stopLocation = () => {
     TaskManager.isTaskRegisteredAsync(LOCATION_TRACKING).then((tracking) => {
       if (tracking) {
+        console.log('Stopping location tracking')
         Location.stopLocationUpdatesAsync(LOCATION_TRACKING);
       }
     });
   }
+  
 }

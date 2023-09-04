@@ -9,40 +9,65 @@ export default function App() {
   const [coordinates, setCoordinates] = useState({ latitude: 0, longitude: 0 });
   const [trackLocation, setTrackLocation] = useState(false);
   const [routePoints, setRoutePoints] = useState([]);
+  const [activeRoute, setActiveRoute] = useState(null);
+  useLocation({ locationUpdate: setCoordinates, trackLocation: trackLocation })
+
 
   // It only updates when coordinates change
   useEffect(() => {
-    console.log('App coordinates', coordinates)
 
-    if(coordinates.latitude !== 0 && coordinates.longitude !== 0) {
-    // Update active route position (This endpoint will fail if there is no active route)
-    axios.put('http://localhost:3000/api/routes/update-position', {
-      coordinates
-    }, {
-      headers: {
-        Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyRW1haWwiOiJ0cmFuc3BvcnRlckB0ZXN0LmNvbSIsImlhdCI6MTY5MzU3OTI1MiwiZXhwIjoxNzc5OTc5MjUyfQ.iOQItVGtF5FHi3c6AGwSHAM87IrcPw2fA6T9GpIXHkI'
-      }
-    })
-  }
+    if(activeRoute == null){
+      axios.get('http://localhost:3000/api/routes/active-route', {
+        headers: {
+          Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyRW1haWwiOiJ0cmFuc3BvcnRlckB0ZXN0LmNvbSIsImlhdCI6MTY5MzU3OTI1MiwiZXhwIjoxNzc5OTc5MjUyfQ.iOQItVGtF5FHi3c6AGwSHAM87IrcPw2fA6T9GpIXHkI'
+        }
+      })
+      .then(res => {
+        console.log('Active route', res.data)
+        setActiveRoute(res.data)
+        setRoutePoints(res.data.points)
+        setTrackLocation(true)
+      })
+      .catch(e => {
+        console.log('Error getting active route')
+        console.log(e)
+      })
+    }
+  }, [activeRoute])
+    
+
+  useEffect(() => {
+      console.log('App coordinates', coordinates)
+
+      if(coordinates.latitude !== 0 && coordinates.longitude !== 0) {
+      // Update active route position (This endpoint will fail if there is no active route)
+        axios.put('http://localhost:3000/api/routes/update-position', {
+          coordinates
+        }, {
+          headers: {
+            Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyRW1haWwiOiJ0cmFuc3BvcnRlckB0ZXN0LmNvbSIsImlhdCI6MTY5MzU3OTI1MiwiZXhwIjoxNzc5OTc5MjUyfQ.iOQItVGtF5FHi3c6AGwSHAM87IrcPw2fA6T9GpIXHkI'
+          }
+        }).catch(e => {
+          console.log('Error updating position')
+          console.log(e)
+        })
+    }
   }, [coordinates.latitude, coordinates.longitude])
 
 
-  useLocation({ locationUpdate: setCoordinates, trackLocation: trackLocation })
   console.log('App coordinates', coordinates)
   return (
     <View style={styles.container}>
       <Text>Open up App.js to start working on your app!</Text>
       <StatusBar style="auto" />
       {/* add button that call to {{baseUrl}}/api/start-route using bearer token  Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyRW1haWwiOiJ0cmFuc3BvcnRlckB0ZXN0LmNvbSIsImlhdCI6MTY5MzU3OTI1MiwiZXhwIjoxNzc5OTc5MjUyfQ.iOQItVGtF5FHi3c6AGwSHAM87IrcPw2fA6T9GpIXHkI*/}
-      <Button title="Start Route" onPress={() => {
+     
+      {activeRoute === null &&  <Button title="Start Route" onPress={() => {
         console.log('Coordinates to send', coordinates)
         axios.post('http://localhost:3000/api/routes/start-route', {
           dayId: 1,
           timeSlotId: 1,
-          coordinates: {
-            latitude: -33.45205601512757,
-            longitude: -70.68216782188323,
-          },
+          coordinates,
         }, {
           headers: {
             Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyRW1haWwiOiJ0cmFuc3BvcnRlckB0ZXN0LmNvbSIsImlhdCI6MTY5MzU3OTI1MiwiZXhwIjoxNzc5OTc5MjUyfQ.iOQItVGtF5FHi3c6AGwSHAM87IrcPw2fA6T9GpIXHkI'
@@ -51,13 +76,32 @@ export default function App() {
           console.log('Route started ', res.data);
           setRoutePoints(res.data)
           setTrackLocation(true);
+          setActiveRoute(res.data);
         }).catch(err => {
           console.log(err)
-          console.log(err.response)
-          console.log('Error sending route');
+          console.log(err.data)
+          console.log('Error starting route');
         })
 
-      }} />
+      }} /> } 
+      {!!activeRoute && <Button title="Stop Route" onPress={ () => {
+
+          axios.put('http://localhost:3000/api/routes/finish-route', {}, {
+            headers: {
+              Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyRW1haWwiOiJ0cmFuc3BvcnRlckB0ZXN0LmNvbSIsImlhdCI6MTY5MzU3OTI1MiwiZXhwIjoxNzc5OTc5MjUyfQ.iOQItVGtF5FHi3c6AGwSHAM87IrcPw2fA6T9GpIXHkI'
+            }
+          }).then((res) => {
+            console.log('Route finished ', res.data);
+            setRoutePoints([]);
+            setTrackLocation(false);
+            setActiveRoute(null);
+          }).catch(err => {
+            console.log(err)
+            console.log(err.data)
+            console.log('Error starting route');
+          })
+
+      } }/>}
       {/* Show current location lat and long */}
       <Text>Latitude: {coordinates.latitude}</Text>
       <Text>Longitude: {coordinates.longitude}</Text>
@@ -89,6 +133,19 @@ export default function App() {
               axios.put('http://localhost:3000/api/routes/update-status', {
             }, {})
             }} /> 
+
+            {!routePoint.arrivalNotified &&  <Button title="Notify arrival" onPress={() => {
+                axios.put(`http://localhost:3000/api/routes/route-points/${routePoint.id}/arrive`, {
+              },{
+                headers: {
+                  Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyRW1haWwiOiJ0cmFuc3BvcnRlckB0ZXN0LmNvbSIsImlhdCI6MTY5MzU3OTI1MiwiZXhwIjoxNzc5OTc5MjUyfQ.iOQItVGtF5FHi3c6AGwSHAM87IrcPw2fA6T9GpIXHkI'
+                }
+              }).then((res) => {
+                routePoints.find((rp) => rp.id === routePoint.id).arrivalNotified = true;
+                setRoutePoints([...routePoints]);
+              })
+            }} /> }
+          
           
           </View>
         )
@@ -96,6 +153,7 @@ export default function App() {
     </View>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {
@@ -105,3 +163,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 });
+
+
