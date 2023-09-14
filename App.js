@@ -6,10 +6,13 @@ import React, { useEffect, useState } from 'react';
 import haversine from 'haversine-distance'
 export default function App() {
 
+  console.log('Opening')
+
   const [coordinates, setCoordinates] = useState({ latitude: 0, longitude: 0 });
   const [trackLocation, setTrackLocation] = useState(false);
   const [routePoints, setRoutePoints] = useState([]);
   const [activeRoute, setActiveRoute] = useState(null);
+  const [targetPoint, setTargetPoint] = useState(null);
   useLocation({ locationUpdate: setCoordinates, trackLocation: trackLocation })
 
 
@@ -74,9 +77,11 @@ export default function App() {
           }}
         ).then((res) => {
           console.log('Route started ', res.data);
-          setRoutePoints(res.data)
+          setRoutePoints(res.data.points)
           setTrackLocation(true);
-          setActiveRoute(res.data);
+          setActiveRoute(res.data.points);
+          console.log('Target point', res.data.target)
+          setTargetPoint(res.data.target);
         }).catch(err => {
           console.log(err)
           console.log(err.data)
@@ -93,6 +98,7 @@ export default function App() {
           }).then((res) => {
             console.log('Route finished ', res.data);
             setRoutePoints([]);
+            setTargetPoint(null);
             setTrackLocation(false);
             setActiveRoute(null);
           }).catch(err => {
@@ -111,8 +117,17 @@ export default function App() {
       {/* Show list of route points the transporter has to drop with a button that says: DROP OFF */}
       <Text style={{fontWeight: 'bold'}}>Route Points</Text>
 
+
+      {targetPoint !== null && <View> 
+
+        <Text>Target Point</Text>
+        <Text>{targetPoint.name} {targetPoint.lastName}</Text>
+        </View>}
+
+
       {routePoints.map((routePoint) => {
         console.log('Route point', routePoint)
+        console.log('My coordinates', coordinates)
         return (
           // Route point {"id": 31, "status": "WAITING", "student": {"address": {"address": "Union Latino Americana", "coordinates": [Object], "createdAt": "2023-09-02T21:36:13.928Z", "deletedAt": null, "id": 1, "name": "Casa", "updatedAt": "2023-09-02T21:36:13.928Z"}, "lastName": "Martinez", "name": "Amy"}}
 
@@ -129,12 +144,27 @@ export default function App() {
               // Transporter coordinates
               { latitude: coordinates.latitude, longitude: coordinates.longitude }
            )}  mts</Text>
-            <Button title="Pick Up" onPress={() => {
-              axios.put('http://localhost:3000/api/routes/update-status', {
-            }, {})
-            }} /> 
+     
+            {routePoint.status === 'WAITING' &&        <Button title="Pick Up" onPress={() => {
+                axios.put(`http://localhost:3000/api/routes/route-points/${routePoint.id}/pick-up`, {
+              }, { headers: {
+                Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyRW1haWwiOiJ0cmFuc3BvcnRlckB0ZXN0LmNvbSIsImlhdCI6MTY5MzU3OTI1MiwiZXhwIjoxNzc5OTc5MjUyfQ.iOQItVGtF5FHi3c6AGwSHAM87IrcPw2fA6T9GpIXHkI'
+              }}).then((res) => {
+                routePoints.find((rp) => rp.id === routePoint.id).status = 'PICKED_UP';
+                setRoutePoints([...routePoints]);
+                console.log('NEW TARGET POINT', res.data.target)
+                setTargetPoint(res.data.target);
+              }).catch(err => {
+                console.log(err)
+                debugger
+                console.log(err.data)
+                console.log('Error picking up');
+              })
+              }} /> 
+            }
 
             {!routePoint.arrivalNotified &&  <Button title="Notify arrival" onPress={() => {
+                console.log('Notifying arrival')
                 axios.put(`http://localhost:3000/api/routes/route-points/${routePoint.id}/arrive`, {
               },{
                 headers: {
@@ -143,6 +173,11 @@ export default function App() {
               }).then((res) => {
                 routePoints.find((rp) => rp.id === routePoint.id).arrivalNotified = true;
                 setRoutePoints([...routePoints]);
+              }).catch(err => {
+                console.log(err)
+                debugger
+                console.log(err.data)
+                console.log('Error notifying arrival');
               })
             }} /> }
           
